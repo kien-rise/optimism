@@ -101,7 +101,7 @@ func TestAltDADataSource(t *testing.T) {
 
 	signer := cfg.L1Signer()
 
-	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da)
+	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da, nil)
 
 	nc := 0
 	firstChallengeExpirationBlock := uint64(95)
@@ -340,7 +340,7 @@ func TestAltDADataSourceStall(t *testing.T) {
 
 	signer := cfg.L1Signer()
 
-	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da)
+	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da, nil)
 
 	parent := l1Refs[0]
 	// create a new mock l1 ref
@@ -462,7 +462,7 @@ func TestAltDADataSourceInvalidData(t *testing.T) {
 
 	signer := cfg.L1Signer()
 
-	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da)
+	factory := NewDataSourceFactory(logger, cfg, l1F, nil, da, nil)
 
 	parent := l1Refs[0]
 	// create a new mock l1 ref

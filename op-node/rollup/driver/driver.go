@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	celestia "github.com/ethereum-optimism/optimism/op-celestia"
 	"github.com/ethereum-optimism/optimism/op-node/metrics/metered"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/async"
@@ -174,6 +175,7 @@ func NewDriver(
 	syncCfg *sync.Config,
 	sequencerConductor conductor.SequencerConductor,
 	altDA AltDAIface,
+	daClient *celestia.DAClient,
 	managedMode bool,
 ) *Driver {
 	driverCtx, driverCancel := context.WithCancel(context.Background())
@@ -209,7 +211,7 @@ func NewDriver(
 	sys.Register("attributes-handler",
 		attributes.NewAttributesHandler(log, cfg, driverCtx, l2), opts)
 
-	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l1Blobs, altDA, l2, metrics, managedMode)
+	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l1Blobs, altDA, daClient, l2, metrics, managedMode)
 
 	sys.Register("pipeline",
 		derive.NewPipelineDeriver(driverCtx, derivationPipeline), opts)

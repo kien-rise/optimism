@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	celestia "github.com/ethereum-optimism/optimism/op-celestia"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
@@ -145,9 +146,6 @@ func (n *OpNode) init(ctx context.Context, cfg *Config) error {
 	}
 	if err := n.initL2(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to init L2: %w", err)
-	}
-	if err := n.initDA(ctx, cfg); err != nil {
-		return fmt.Errorf("failed to init da: %w", err)
 	}
 	if err := n.initRuntimeConfig(ctx, cfg); err != nil { // depends on L2, to signal initial runtime values to
 		return fmt.Errorf("failed to init the runtime config: %w", err)
@@ -387,10 +385,6 @@ func (n *OpNode) initL1BeaconAPI(ctx context.Context, cfg *Config) error {
 	}
 }
 
-func (n *OpNode) initDA(ctx context.Context, cfg *Config) error {
-	return driver.SetDAClient(cfg.DaConfig)
-}
-
 func (n *OpNode) initL2(ctx context.Context, cfg *Config) error {
 	rpcClient, rpcCfg, err := cfg.L2.Setup(ctx, n.log, &cfg.Rollup, n.metrics)
 	if err != nil {
@@ -432,6 +426,12 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("failed to get altDA config: %w", err)
 	}
 	altDA := altda.NewAltDA(n.log, cfg.AltDA, rpCfg, n.metrics.AltDAMetrics)
+
+	var daClient *celestia.DAClient
+	if cfg.DaConfig.Enabled {
+		daClient, err = celestia.NewDAClient(cfg.DaConfig.Rpc, cfg.DaConfig.AuthToken, cfg.DaConfig.Namespace, cfg.DaConfig.FallbackMode, cfg.DaConfig.GasPrice)
+	}
+
 	if cfg.SafeDBPath != "" {
 		n.log.Info("Safe head database enabled", "path", cfg.SafeDBPath)
 		safeDB, err := safedb.NewSafeDB(n.log, cfg.SafeDBPath)
@@ -448,7 +448,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config) error {
 	}
 
 	n.l2Driver = driver.NewDriver(n.eventSys, n.eventDrain, &cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source,
-		n.beacon, n, n, n.log, n.metrics, cfg.ConfigPersistence, n.safeDB, &cfg.Sync, sequencerConductor, altDA, managedMode)
+		n.beacon, n, n, n.log, n.metrics, cfg.ConfigPersistence, n.safeDB, &cfg.Sync, sequencerConductor, altDA, daClient, managedMode)
 	return nil
 }
 

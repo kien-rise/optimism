@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	celestia "github.com/ethereum-optimism/optimism/op-celestia"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
@@ -44,10 +45,11 @@ type DataSourceFactory struct {
 	fetcher      L1Fetcher
 	blobsFetcher L1BlobsFetcher
 	altDAFetcher AltDAInputFetcher
+	daClient     *celestia.DAClient
 	ecotoneTime  *uint64
 }
 
-func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher, blobsFetcher L1BlobsFetcher, altDAFetcher AltDAInputFetcher) *DataSourceFactory {
+func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher, blobsFetcher L1BlobsFetcher, altDAFetcher AltDAInputFetcher, daClient *celestia.DAClient) *DataSourceFactory {
 	config := DataSourceConfig{
 		l1Signer:          cfg.L1Signer(),
 		batchInboxAddress: cfg.BatchInboxAddress,
@@ -59,6 +61,7 @@ func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher,
 		fetcher:      fetcher,
 		blobsFetcher: blobsFetcher,
 		altDAFetcher: altDAFetcher,
+		daClient:     daClient,
 		ecotoneTime:  cfg.EcotoneTime,
 	}
 }
@@ -80,8 +83,8 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 		// altDA([calldata | blobdata](l1Ref)) -> data
 		src = NewAltDADataSource(ds.log, src, ds.fetcher, ds.altDAFetcher, ref)
 	}
-	if CelestiaDAEnabled() {
-		src = NewCelestiaDataSource(ds.log, src)
+	if ds.daClient != nil {
+		src = NewCelestiaDataSource(ds.log, src, ds.daClient)
 	}
 	return src, nil
 }

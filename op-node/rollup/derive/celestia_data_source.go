@@ -9,28 +9,19 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-var daClient *celestia.DAClient
-
-func CelestiaDAEnabled() bool {
-	return daClient != nil
-}
-
-func SetCelestiaDA(c *celestia.DAClient) error {
-	daClient = c
-	return nil
-}
-
 type CelestiaDataSource struct {
-	log log.Logger
-	src DataIter
+	log      log.Logger
+	src      DataIter
+	daClient *celestia.DAClient
 	// keep track of a pending commitment so we can keep trying to fetch the input.
 	comm eth.Data
 }
 
-func NewCelestiaDataSource(log log.Logger, src DataIter) *CelestiaDataSource {
+func NewCelestiaDataSource(log log.Logger, src DataIter, daClient *celestia.DAClient) *CelestiaDataSource {
 	return &CelestiaDataSource{
-		log: log,
-		src: src,
+		log:      log,
+		src:      src,
+		daClient: daClient,
 	}
 }
 
@@ -55,8 +46,8 @@ func (s *CelestiaDataSource) Next(ctx context.Context) (eth.Data, error) {
 		s.comm = data[1:]
 	}
 
-	cCtx, cancel := context.WithTimeout(ctx, daClient.GetTimeout)
-	blobs, err := daClient.Client.Get(cCtx, [][]byte{s.comm}, daClient.Namespace)
+	cCtx, cancel := context.WithTimeout(ctx, s.daClient.GetTimeout)
+	blobs, err := s.daClient.Client.Get(cCtx, [][]byte{s.comm}, s.daClient.Namespace)
 	cancel()
 
 	if err != nil {
