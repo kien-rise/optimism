@@ -13,7 +13,7 @@ import (
 
 // outputRootGameTypes lists the set of legacy game types that use output roots
 // It is assumed that all other game types use super roots
-var outputRootGameTypes = []uint32{0, 1, 2, 3, 6, 254, 255, 1337}
+var outputRootGameTypes = []uint32{0, 1, 2, 3, 6, 42, 254, 255, 1337}
 
 // EnrichedClaim extends the faultTypes.Claim with additional context.
 type EnrichedClaim struct {
