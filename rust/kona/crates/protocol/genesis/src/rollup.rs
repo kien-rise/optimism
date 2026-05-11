@@ -327,12 +327,13 @@ impl RollupConfig {
     }
 
     /// Returns the max sequencer drift for the given timestamp.
-    pub fn max_sequencer_drift(&self, timestamp: u64) -> u64 {
-        if self.is_fjord_active(timestamp) {
-            FJORD_MAX_SEQUENCER_DRIFT
-        } else {
-            self.max_sequencer_drift
-        }
+    pub fn max_sequencer_drift(&self, _timestamp: u64) -> u64 {
+        /// ## RISE:
+        /// - `MaxSequencerDrift`
+        /// - https://github.com/risechain/rise-optimism/blob/develop/op-node/rollup/chain_spec.go#L116
+        /// - https://github.com/risechain/rise-optimism/pull/801
+        const RISE_MAX_SEQUENCER_DRIFT: u64 = 10800;
+        RISE_MAX_SEQUENCER_DRIFT
     }
 
     /// Returns the max rlp bytes per channel for the given timestamp.

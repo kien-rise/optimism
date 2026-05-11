@@ -51,9 +51,20 @@ where
 
     /// Returns the active [`CfgEnv`] for the executor.
     pub(crate) fn evm_cfg_env(&self, timestamp: u64) -> CfgEnv<OpSpecId> {
-        CfgEnv::new()
+        let mut cfg = CfgEnv::new()
             .with_chain_id(self.config.l2_chain_id.id())
-            .with_spec_and_mainnet_gas_params(self.config.spec_id(timestamp))
+            .with_spec_and_mainnet_gas_params(self.config.spec_id(timestamp));
+        /// ## RISE:
+        /// - https://github.com/risechain/rise/blob/adc3b88041a795ae4159fae7ffb3f442a257bc35/execution/crates/primitives/src/evm.rs#L15
+        const RISE_MAX_CODE_SIZE: usize = 0x40000;
+        cfg.limit_contract_code_size = Some(RISE_MAX_CODE_SIZE);
+
+
+        /// ## RISE:
+        /// - https://github.com/risechain/rise/blob/adc3b88041a795ae4159fae7ffb3f442a257bc35/execution/crates/primitives/src/evm.rs#L16
+        const RISE_MAX_INIT_CODE_SIZE: usize = 2 * RISE_MAX_CODE_SIZE;
+        cfg.limit_contract_initcode_size = Some(RISE_MAX_INIT_CODE_SIZE);
+        cfg
     }
 
     fn next_block_base_fee(

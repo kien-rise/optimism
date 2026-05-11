@@ -54,7 +54,11 @@ pub const FRAME_OVERHEAD: usize = 200;
 /// - **Transmission efficiency**: Larger frames reduce overhead
 /// - **Network compatibility**: Must fit within reasonable L1 transaction sizes
 /// - **Memory constraints**: Avoid excessive memory usage during processing
-pub const MAX_FRAME_LEN: usize = 1_000_000;
+///
+/// ## RISE:
+/// - `const MaxFrameLen = 100_000_000`
+/// - https://github.com/risechain/rise-optimism/blob/develop/op-node/rollup/derive/frame.go#L17
+pub const MAX_FRAME_LEN: usize = 100_000_000;
 
 /// A frame decoding error.
 #[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq, Hash)]

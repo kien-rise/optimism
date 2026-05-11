@@ -14,9 +14,11 @@ pub struct DaFootprintGasScalarUpdate {
 }
 
 impl DaFootprintGasScalarUpdate {
-    /// The default DA footprint gas scalar
-    /// <https://github.com/ethereum-optimism/specs/blob/664cba65ab9686b0e70ad19fdf2ad054d6295986/specs/protocol/jovian/l1-attributes.md#overview>
-    pub const DEFAULT_DA_FOOTPRINT_GAS_SCALAR: u16 = 400;
+    /// ## RISE:
+    /// - `DAFootprintGasScalarDefault = 0`
+    /// - https://github.com/risechain/rise-optimism/blob/develop/op-node/rollup/derive/l1_block_info.go#L51
+    /// - https://github.com/risechain/rise-optimism/pull/749
+    pub const DEFAULT_DA_FOOTPRINT_GAS_SCALAR: u16 = 0;
 
     /// Applies the update to the [`SystemConfig`].
     pub const fn apply(&self, config: &mut SystemConfig) {
