@@ -223,9 +223,9 @@ pub mod hint {
         Ok(())
     }
 
-    /// Recomputes the output root from the agreed L2 head (header + `L2ToL1MessagePasser` storage),
-    /// asserts it matches `agreed_l2_output_root`, then stores the encoded output root in the KV
-    /// store.
+    /// Recomputes the output root from the agreed L2 head and stores it in the KV store.
+    /// Post-Isthmus uses `header.withdrawals_root` directly; pre-Isthmus falls back to
+    /// `eth_getProof`.
     pub async fn starting_l2_output(
         data: Bytes,
         l2: impl Provider<Optimism>,
@@ -239,21 +239,29 @@ pub mod hint {
             l2.client().request("debug_getRawHeader", &[agreed_l2_head_hash]).await?;
         let header = Header::decode(&mut raw_header.as_ref())?;
 
-        let l2_to_l1_message_passer = l2
-            .get_proof(Predeploys::L2_TO_L1_MESSAGE_PASSER, Default::default())
-            .block_id(agreed_l2_head_hash.into())
-            .await?;
+        // Post-Isthmus: withdrawals_root stores the L2ToL1MessagePasser storage root directly.
+        // Pre-Isthmus: fall back to eth_getProof (one extra RPC round-trip).
+        let storage_root = if let Some(root) = header.withdrawals_root {
+            root
+        } else {
+            tracing::debug!(target: "single_hint_handler", "l2.get_proof called");
+            l2.get_proof(Predeploys::L2_TO_L1_MESSAGE_PASSER, Default::default())
+                .block_id(agreed_l2_head_hash.into())
+                .await?
+                .storage_hash
+        };
 
-        let output_root = OutputRoot::from_parts(
-            header.state_root,
-            l2_to_l1_message_passer.storage_hash,
-            agreed_l2_head_hash,
-        );
+        let output_root =
+            OutputRoot::from_parts(header.state_root, storage_root, agreed_l2_head_hash);
         let output_root_hash = output_root.hash();
 
         ensure!(output_root_hash == agreed_l2_output_root, "Output root does not match L2 head.");
 
         let mut kv_write_lock = kv.write().await;
+        kv_write_lock.set(
+            PreimageKey::new_keccak256(*agreed_l2_head_hash).into(), //
+            raw_header.into(),
+        )?;
         kv_write_lock.set(
             PreimageKey::new_keccak256(*output_root_hash).into(),
             output_root.encode().into(),
@@ -326,6 +334,7 @@ pub mod hint {
         let block_number = u64::from_be_bytes(data.as_ref()[..8].try_into()?);
         let address = Address::from_slice(&data.as_ref()[8..28]);
 
+        tracing::debug!(target: "single_hint_handler", "l2.get_proof called");
         let proof_response =
             l2.get_proof(address, Default::default()).block_id(block_number.into()).await?;
 
@@ -350,6 +359,7 @@ pub mod hint {
         let address = Address::from_slice(&data.as_ref()[8..28]);
         let slot = B256::from_slice(&data.as_ref()[28..]);
 
+        tracing::debug!(target: "single_hint_handler", "l2.get_proof called");
         let mut proof_response =
             l2.get_proof(address, vec![slot]).block_id(block_number.into()).await?;
 
