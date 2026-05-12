@@ -7,4 +7,4 @@ mod local_kv;
 pub use local_kv::SingleChainLocalInputs;
 
 mod handler;
-pub use handler::{SingleChainHintHandler, parse_blob_hint};
+pub use handler::{SingleChainHintHandler, hint, parse_blob_hint};
