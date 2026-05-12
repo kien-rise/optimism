@@ -47,6 +47,7 @@ where
 
     /// Walks back the L2 chain to find the correct L1 origin for a pipeline reset.
     /// This mirrors op-node's `initialReset` algorithm.
+    #[allow(dead_code)]
     pub(crate) async fn initial_reset(
         &mut self,
         l2_safe_head: L2BlockInfo,
@@ -121,7 +122,16 @@ where
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
         match signal {
             Signal::Reset(ResetSignal { l2_safe_head }) => {
-                let (l1_origin, system_config) = self.initial_reset(l2_safe_head).await?;
+                // let (l1_origin, system_config) = self.initial_reset(l2_safe_head).await?;
+                let l1_origin = l2_safe_head.l1_origin;
+                let system_config = self
+                    .l2_chain_provider
+                    .system_config_by_number(
+                        l2_safe_head.block_info.number,
+                        Arc::clone(&self.rollup_config),
+                    )
+                    .await
+                    .map_err(Into::into)?;
                 match self.attributes.reset(l1_origin, system_config).await {
                     Ok(()) => trace!(target: "pipeline", "Stages reset"),
                     Err(err) => {
