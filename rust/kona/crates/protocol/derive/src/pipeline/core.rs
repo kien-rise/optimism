@@ -53,8 +53,16 @@ where
     ) -> Result<(BlockNumHash, SystemConfig), PipelineErrorKind> {
         let l1_origin_number = l2_safe_head.l1_origin.number;
         let channel_timeout = self.rollup_config.channel_timeout(l2_safe_head.block_info.timestamp);
+        debug!(
+            target: "pipeline",
+            l2_safe_head_number = l2_safe_head.block_info.number,
+            l1_origin_number,
+            channel_timeout,
+            "starting initial_reset walkback"
+        );
 
         let mut current = l2_safe_head;
+        let mut steps = 0u64;
         loop {
             let before_l2_genesis =
                 current.block_info.number <= self.rollup_config.genesis.l2.number;
@@ -63,9 +71,24 @@ where
             let before_channel_timeout =
                 current.l1_origin.number + channel_timeout <= l1_origin_number;
             if before_l2_genesis || before_l1_genesis || before_channel_timeout {
+                debug!(
+                    target: "pipeline",
+                    l2_block = current.block_info.number,
+                    l1_origin = current.l1_origin.number,
+                    steps,
+                    before_l2_genesis,
+                    before_l1_genesis,
+                    before_channel_timeout,
+                    "walkback stopping"
+                );
                 break;
             }
 
+            debug!(
+                target: "pipeline",
+                l2_block = current.block_info.number,
+                "walking back one L2 block"
+            );
             current = self
                 .l2_chain_provider
                 .l2_block_info_by_number(current.block_info.number - 1)
@@ -73,13 +96,20 @@ where
                 .map_err(|e| {
                     PipelineError::Provider(alloc::string::ToString::to_string(&e)).temp()
                 })?;
+            steps += 1;
         }
 
+        debug!(
+            target: "pipeline",
+            l2_block = current.block_info.number,
+            "fetching system config at walked-back L2 block"
+        );
         let system_config = self
             .l2_chain_provider
             .system_config_by_number(current.block_info.number, Arc::clone(&self.rollup_config))
             .await
             .map_err(|e| PipelineError::Provider(alloc::string::ToString::to_string(&e)).temp())?;
+        debug!(target: "pipeline", l1_origin = current.l1_origin.number, "initial_reset complete");
 
         Ok((current.l1_origin, system_config))
     }
@@ -119,9 +149,22 @@ where
     P: L2ChainProvider + Send + Sync + Debug,
 {
     async fn signal(&mut self, signal: Signal) -> PipelineResult<()> {
+        debug!(target: "pipeline", signal = %signal, "received signal");
         match signal {
             Signal::Reset(ResetSignal { l2_safe_head }) => {
+                // initial_reset walks back L2 blocks (one oracle fetch per block) then fetches
+                // the SystemConfig — the dominant cost for this signal.
+                debug!(
+                    target: "pipeline",
+                    l2_safe_head_number = l2_safe_head.block_info.number,
+                    "running initial_reset"
+                );
                 let (l1_origin, system_config) = self.initial_reset(l2_safe_head).await?;
+                debug!(
+                    target: "pipeline",
+                    l1_origin_number = l1_origin.number,
+                    "initial_reset done, resetting stages"
+                );
                 match self.attributes.reset(l1_origin, system_config).await {
                     Ok(()) => trace!(target: "pipeline", "Stages reset"),
                     Err(err) => {
@@ -137,6 +180,7 @@ where
             Signal::Activation(ActivationSignal { .. }) => {
                 // Activation is a soft reset for hardfork boundaries. It clears
                 // buffered data but preserves derivation state. No walkback needed.
+                debug!(target: "pipeline", "activating stages");
                 match self.attributes.activate().await {
                     Ok(()) => trace!(target: "pipeline", "Stages activated"),
                     Err(err) => {
@@ -150,9 +194,11 @@ where
                 }
             }
             Signal::FlushChannel => {
+                debug!(target: "pipeline", "flushing channel");
                 self.attributes.flush_channel().await?;
             }
             Signal::ProvideBlock(block) => {
+                debug!(target: "pipeline", block_number = block.number, "providing block");
                 self.attributes.provide_block(block).await?;
             }
         }
