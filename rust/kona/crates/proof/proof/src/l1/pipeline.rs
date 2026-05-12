@@ -57,6 +57,7 @@ where
         chain_provider: L1,
         l2_chain_provider: L2,
     ) -> PipelineResult<Self> {
+        tracing::debug!(target: "oracle_pipeline", "building attributes builder");
         let attributes = StatefulAttributesBuilder::new(
             cfg.clone(),
             l1_cfg,
@@ -64,18 +65,27 @@ where
             chain_provider.clone(),
         );
 
+        let origin = sync_start.read().origin();
+        tracing::debug!(target: "oracle_pipeline", ?origin, "building derivation pipeline");
         let mut pipeline = PipelineBuilder::new()
             .rollup_config(cfg)
             .dap_source(da_provider)
             .l2_chain_provider(l2_chain_provider.clone())
             .chain_provider(chain_provider)
             .builder(attributes)
-            .origin(sync_start.read().origin())
+            .origin(origin)
             .build_polled();
 
         // Reset the pipeline to populate the initial system configuration in L1 Traversal.
+        // This is the only async step — it fetches the SystemConfig from L1 via oracle.
         let l2_safe_head = *sync_start.read().l2_safe_head();
+        tracing::debug!(
+            target: "oracle_pipeline",
+            l2_safe_head_number = l2_safe_head.block_info.number,
+            "resetting pipeline to populate initial system config"
+        );
         pipeline.signal(Signal::Reset(ResetSignal { l2_safe_head })).await?;
+        tracing::debug!(target: "oracle_pipeline", "pipeline reset complete");
 
         Ok(Self { pipeline, caching_oracle })
     }
