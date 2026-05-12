@@ -149,7 +149,7 @@ where
     /// - `Ok(B256)`: The new state root hash of the trie DB.
     /// - `Err(_)`: If the state root hash could not be computed.
     pub fn state_root(&mut self, bundle: &BundleState) -> TrieDBResult<B256> {
-        debug!(target: "client_executor", "Recomputing state root");
+        tracing::debug!("Recomputing state root");
 
         // Update the accounts in the trie with the changeset.
         self.update_accounts(bundle)?;
@@ -157,10 +157,7 @@ where
         // Recompute the root hash of the trie.
         let root = self.root_node.blind();
 
-        debug!(
-            target: "client_executor",
-            "Recomputed state root: {root}",
-        );
+        tracing::debug!("Recomputed state root: {root}");
 
         // Extract the new state root from the root node.
         Ok(root)

@@ -126,8 +126,7 @@ where
     pub fn compute_output_root(&mut self) -> ExecutorResult<B256> {
         let parent_number = self.trie_db.parent_block_header().number;
 
-        info!(
-            target: "block_builder",
+        tracing::info!(
             parent_state_root = ?self.trie_db.parent_block_header().state_root,
             parent_block_number = parent_number,
             "Computing output root",
@@ -141,8 +140,7 @@ where
             OutputRoot::from_parts(parent_header.state_root, storage_root, parent_header.seal())
                 .hash();
 
-        info!(
-            target: "block_builder",
+        tracing::info!(
             parent_block_number = parent_number,
             output_root = ?output_root_hash,
             "Computed output root",

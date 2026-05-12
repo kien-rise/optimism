@@ -9,9 +9,6 @@
 
 extern crate alloc;
 
-#[macro_use]
-extern crate tracing;
-
 mod db;
 pub use db::{NoopTrieDBProvider, TrieDB, TrieDBProvider};
 
