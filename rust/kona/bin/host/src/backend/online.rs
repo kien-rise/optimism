@@ -101,7 +101,7 @@ where
             .parse::<Hint<C::HintType>>()
             .map_err(|e| PreimageOracleError::HintParseFailed(e.to_string()))?;
         if self.proactive_hints.contains(&parsed_hint.ty) {
-            debug!(target: "host_backend", "Proactive hint received; Immediately fetching {hint}");
+            debug!(target: "host_backend", "Proactive hint received; Immediately fetching hint ({} bytes)", parsed_hint.data.len());
             H::fetch_hint(parsed_hint, &self.cfg, &self.providers, self.kv.clone())
                 .await
                 .map_err(|e| PreimageOracleError::Other(e.to_string()))?;
