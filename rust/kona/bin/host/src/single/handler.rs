@@ -11,7 +11,7 @@ use alloy_provider::Provider;
 use alloy_rlp::Decodable;
 use alloy_rpc_types::{Block, debug::ExecutionWitness};
 use alloy_transport::{RpcError, TransportErrorKind};
-use anyhow::{Result, anyhow, ensure};
+use anyhow::{Context, Result, anyhow, ensure};
 use ark_ff::{BigInteger, PrimeField};
 use async_trait::async_trait;
 use kona_preimage::{PreimageKey, PreimageKeyType};
@@ -20,7 +20,7 @@ use kona_protocol::{BlockInfo, OutputRoot, Predeploys};
 use kona_providers_alloy::BlobWithCommitmentAndProof;
 use op_alloy_network::Ethereum;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
-use tracing::{info, warn};
+use tracing::warn;
 
 /// Parses a blob hint into `(hash, timestamp)`. Supports 40-byte (hash + timestamp) and
 /// 48-byte legacy (hash + index + timestamp) formats; the legacy index field is ignored.
@@ -56,6 +56,7 @@ pub fn parse_blob_hint(hint_data: &[u8]) -> Result<(B256, u64)> {
 
 /// Returns `true` if the RPC error indicates the node does not support the requested method
 /// (JSON-RPC error code -32601: Method not found).
+#[allow(dead_code)]
 const fn is_rpc_method_not_found(e: &RpcError<TransportErrorKind>) -> bool {
     matches!(e, RpcError::ErrorResp(p) if p.code == -32601)
 }
@@ -381,7 +382,6 @@ pub mod hint {
     }
 
     /// Calls `debug_executePayload` on the L2 node and stores all returned witness preimages.
-    /// No-ops if the method is not found on the node.
     pub async fn l2_payload_witness(
         data: Bytes,
         l2: impl Provider<Optimism>,
@@ -391,25 +391,14 @@ pub mod hint {
         let parent_block_hash = B256::from_slice(&data.as_ref()[..32]);
         let payload_attributes: OpPayloadAttributes = serde_json::from_slice(&data[32..])?;
 
-        let execute_payload_response = match l2
+        let execute_payload_response = l2
             .client()
             .request::<(B256, OpPayloadAttributes), ExecutionWitness>(
                 "debug_executePayload",
                 (parent_block_hash, payload_attributes),
             )
             .await
-        {
-            Ok(response) => response,
-            Err(e) => {
-                info!(
-                    target: "single_hint_handler",
-                    err = %e,
-                    method_not_found = super::is_rpc_method_not_found(&e),
-                    "debug_executePayload unavailable, skipping witness preimage collection"
-                );
-                return Ok(());
-            }
-        };
+            .context("debug_executePayload RPC call failed")?;
 
         let preimages = execute_payload_response
             .state
