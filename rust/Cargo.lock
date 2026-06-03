@@ -3052,16 +3052,13 @@ dependencies = [
 name = "example-batcher-txs"
 version = "0.0.0"
 dependencies = [
- "alloy-consensus",
- "alloy-network-primitives",
- "alloy-primitives",
- "alloy-provider",
- "alloy-rpc-types",
  "alloy-transport-http",
  "anyhow",
  "clap",
+ "kona-derive",
  "kona-genesis",
  "kona-protocol",
+ "kona-providers-alloy",
  "kona-registry",
  "tokio",
  "tracing-subscriber 0.3.23",
