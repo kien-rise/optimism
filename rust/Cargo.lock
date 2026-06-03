@@ -3049,6 +3049,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-batcher-txs"
+version = "0.0.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-network-primitives",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "alloy-transport-http",
+ "anyhow",
+ "clap",
+ "kona-genesis",
+ "kona-protocol",
+ "kona-registry",
+ "tokio",
+ "tracing-subscriber 0.3.23",
+]
+
+[[package]]
 name = "example-discovery"
 version = "0.0.0"
 dependencies = [
