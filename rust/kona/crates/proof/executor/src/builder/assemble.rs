@@ -46,7 +46,7 @@ where
             |tx, buf| buf.put_slice(tx.as_ref()),
         )
         .root();
-        let receipts_root = compute_receipts_root(&ex_result.receipts, self.config, timestamp);
+        let receipts_root = compute_receipts_root(&ex_result.receipts, &self.config, timestamp);
         let withdrawals_root = if self.config.is_isthmus_active(timestamp) {
             Some(self.message_passer_account(block_env.number.saturating_to::<u64>())?)
         } else if self.config.is_canyon_active(timestamp) {
@@ -72,13 +72,13 @@ where
         //
         // If the payload's `eip_1559_params` are equal to `0`, then the header's `extraData`
         // field is set to the encoded canyon base fee parameters.
-        let encoded_base_fee_params = match self.config {
+        let encoded_base_fee_params = match &*self.config {
             config if config.is_jovian_active(timestamp) => {
-                let extra_data = encode_jovian_eip_1559_params(self.config, attrs)?;
+                let extra_data = encode_jovian_eip_1559_params(config, attrs)?;
                 Ok(extra_data)
             }
             config if config.is_holocene_active(timestamp) => {
-                encode_holocene_eip_1559_params(self.config, attrs)
+                encode_holocene_eip_1559_params(config, attrs)
             }
             _ => Ok(Default::default()),
         }?;

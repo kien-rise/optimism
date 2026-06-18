@@ -1,6 +1,7 @@
 //! Rollup Config Types
 
 use crate::{AltDAConfig, BaseFeeConfig, ChainGenesis, HardForkConfig, OP_MAINNET_BASE_FEE_CONFIG};
+use alloc::borrow::Cow;
 use alloy_chains::Chain;
 use alloy_hardforks::{EthereumHardfork, EthereumHardforks, ForkCondition};
 use alloy_op_hardforks::{OpHardfork, OpHardforks};
@@ -82,6 +83,13 @@ pub struct RollupConfig {
     /// `chain_op_config` is the chain-specific EIP1559 config for the rollup.
     #[cfg_attr(feature = "serde", serde(default = "BaseFeeConfig::optimism"))]
     pub chain_op_config: BaseFeeConfig,
+}
+
+impl<'a> From<&'a RollupConfig> for Cow<'a, RollupConfig> {
+    #[inline]
+    fn from(config: &'a RollupConfig) -> Self {
+        Cow::Borrowed(config)
+    }
 }
 
 #[cfg(feature = "arbitrary")]

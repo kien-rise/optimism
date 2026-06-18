@@ -1,6 +1,6 @@
 //! An executor constructor.
 
-use alloc::boxed::Box;
+use alloc::{borrow::Cow, boxed::Box};
 use alloy_consensus::{Header, Sealed};
 use alloy_evm::{EvmFactory, FromRecoveredTx, FromTxWithEncoded, revm::context::BlockEnv};
 use alloy_op_evm::block::OpTxEnv;
@@ -24,7 +24,7 @@ where
     Evm: EvmFactory + Send + Sync + Clone,
 {
     /// The rollup config for the executor.
-    rollup_config: &'a RollupConfig,
+    rollup_config: Cow<'a, RollupConfig>,
     /// The trie provider for the executor.
     trie_provider: P,
     /// The trie hinter for the executor.
@@ -42,14 +42,14 @@ where
     Evm: EvmFactory + Send + Sync + Clone,
 {
     /// Creates a new executor.
-    pub const fn new(
-        rollup_config: &'a RollupConfig,
+    pub fn new(
+        rollup_config: impl Into<Cow<'a, RollupConfig>>,
         trie_provider: P,
         trie_hinter: H,
         evm_factory: Evm,
         inner: Option<StatelessL2Builder<'a, P, H, Evm>>,
     ) -> Self {
-        Self { rollup_config, trie_provider, trie_hinter, evm_factory, inner }
+        Self { rollup_config: rollup_config.into(), trie_provider, trie_hinter, evm_factory, inner }
     }
 }
 
@@ -76,7 +76,7 @@ where
     /// a new executor is created with the updated header.
     fn update_safe_head(&mut self, header: Sealed<Header>) {
         self.inner = Some(StatelessL2Builder::new(
-            self.rollup_config,
+            self.rollup_config.clone(),
             self.evm_factory.clone(),
             self.trie_provider.clone(),
             self.trie_hinter.clone(),

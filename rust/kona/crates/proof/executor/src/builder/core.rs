@@ -5,7 +5,7 @@
 //! data from a [`TrieDB`] during execution rather than maintaining full state.
 
 use crate::{ExecutorError, ExecutorResult, TrieDB, TrieDBError, TrieDBProvider};
-use alloc::{string::ToString, vec::Vec};
+use alloc::{borrow::Cow, string::ToString, vec::Vec};
 use alloy_consensus::{Header, Sealed, crypto::RecoveryError};
 use alloy_evm::{
     EvmFactory, FromRecoveredTx, FromTxWithEncoded,
@@ -84,7 +84,7 @@ where
     /// Provides access to network-specific parameters including gas limits,
     /// hard fork activation heights, and system addresses needed for proper
     /// L2 block execution and validation.
-    pub(crate) config: &'a RollupConfig,
+    pub(crate) config: Cow<'a, RollupConfig>,
     /// The trie database providing stateless access to L2 state via Merkle proofs.
     ///
     /// The [`TrieDB`] serves as the primary interface for state access during
@@ -133,16 +133,17 @@ where
     /// );
     /// ```
     pub fn new(
-        config: &'a RollupConfig,
+        config: impl Into<Cow<'a, RollupConfig>>,
         evm_factory: Evm,
         provider: P,
         hinter: H,
         parent_header: Sealed<Header>,
     ) -> Self {
+        let config = config.into();
         let trie_db = TrieDB::new(parent_header, provider, hinter);
         let factory = OpBlockExecutorFactory::new(
             OpAlloyReceiptBuilder::default(),
-            config.clone(),
+            config.clone().into_owned(),
             evm_factory,
         );
         Self { config, trie_db, factory }
@@ -215,7 +216,7 @@ where
     ) -> ExecutorResult<BlockBuildingOutcome> {
         // Step 1. Set up the execution environment.
         let (base_fee_params, min_base_fee) = Self::active_base_fee_params(
-            self.config,
+            &self.config,
             self.trie_db.parent_block_header(),
             attrs.payload_attributes.timestamp,
         )?;
